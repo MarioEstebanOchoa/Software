@@ -10,17 +10,17 @@ name_test_day = '26-Jul-2019';
 
 test_day_path = ['data\' name_test_day];
 
-f = fopen([test_day_path '\middle.txt'],'at');
+f = fopen([test_day_path '\index.txt'],'at');
 
 %fprintf(f,'folder,err_independant_train,err_all_dimenssion_regression_train,err_time_series_train,dataset,err_indep_regression_test_t,err_regression_test_t,err_time_series_test_t\n');
 
-for k = 2:2
+for k = 1:1
 for i=1:timesToTrain
 
     
 %clear 
 %clc
-close all
+%close all
 
 
 
@@ -35,9 +35,11 @@ hidden_time = 10; %time series
 
 if training
 
-path = [test_day_path '\' num2str(folder) '\train_middle.mat'];
+path = [test_day_path '\' num2str(folder) '\train_index.mat'];
 
 load(path);
+
+
 
 input(:,2) = input(:,2)*100/5;  % map 0-5 Volts to 0-100
 
@@ -48,59 +50,38 @@ output_y_filt = SimpleKalmanFilter(output(:,3), output(1,3), 1, 1, 2);
 output_z_filt = SimpleKalmanFilter(output(:,4), output(1,4), 1, 1, 2);
 
 if p_plot
-    figure
-    plot(timestamp,output(:,2))
-    hold on
-    plot(timestamp,output(:,3))
-    plot(timestamp,output(:,4))
-    title('RAW POLARIS DATA')
-    legend({'x position','y position','z position'},'Location','northeast');
-    xlabel('[sec]')
-    ylabel('[mm]')
-    grid on
-    
-    figure
-    plot3(output(:,2),output(:,3),output(:,4),'*')
-    title('3D raw position Polaris Sensor')
-    xlabel('x position [mm]')
-    ylabel('y position [mm]')
-    zlabel('z position [mm]')
-    axis equal
-    axis([0 20 0 100 30 70])
-    grid on
-    
-    figure
-    subplot(4,1,1)
-    plot(timestamp,input(:,2));
-    hold on
-    plot(timestamp,input_filt);
-    title('DATA FILTERING')
-    legend({'measured','filtered'},'Location','northeast');
-    xlabel('flex sensor')
+figure
+subplot(4,1,1)
+plot(timestamp,input(:,2));
+hold on
+plot(timestamp,input_filt);
+title('DATA FILTERING')
+legend({'measured','filtered'},'Location','northeast');
+xlabel('flex sensor')
 
-    subplot(4,1,2)
-    plot(timestamp,output(:,2))
-    hold on
-    plot(timestamp,output_x_filt)
-    legend({'measured','filtered'},'Location','northeast');
-    xlabel('x position')
-    ylabel('position [mm]')
+subplot(4,1,2)
+plot(timestamp,output(:,2))
+hold on
+plot(timestamp,output_x_filt)
+legend({'measured','filtered'},'Location','northeast');
+xlabel('x position')
+ylabel('position [mm]')
 
-    subplot(4,1,3)
-    plot(timestamp,output(:,3))
-    hold on
-    plot(timestamp,output_y_filt)
-    legend({'measured','filtered'},'Location','northeast');
-    xlabel('y position')
-    ylabel('position [mm]')
+subplot(4,1,3)
+plot(timestamp,output(:,3))
+hold on
+plot(timestamp,output_y_filt)
+legend({'measured','filtered'},'Location','northeast');
+xlabel('y position')
+ylabel('position [mm]')
 
-    subplot(4,1,4)
-    plot(timestamp,output(:,4))
-    hold on
-    plot(timestamp,output_z_filt)
-    legend({'measured','filtered'},'Location','northeast');
-    xlabel('z position')
-    ylabel('position [mm]')
+subplot(4,1,4)
+plot(timestamp,output(:,4))
+hold on
+plot(timestamp,output_z_filt)
+legend({'measured','filtered'},'Location','northeast');
+xlabel('z position')
+ylabel('position [mm]')
 end
 
 real_pos = [output_x_filt output_y_filt output_z_filt];
@@ -108,9 +89,9 @@ real_pos = [output_x_filt output_y_filt output_z_filt];
 %% Training and testing, fitting function, regression
 % Training each dimension independantly 
 
-x_pred = train_prediction(input_filt,output_x_filt,n_hidden(1,1),'flex_middle_x');
-y_pred = train_prediction(input_filt,output_y_filt,n_hidden(1,2),'flex_middle_y');
-z_pred = train_prediction(input_filt,output_z_filt,n_hidden(1,3),'flex_middle_z');
+x_pred = train_prediction(input_filt,output_x_filt,n_hidden(1,1),'flex_index_x');
+y_pred = train_prediction(input_filt,output_y_filt,n_hidden(1,2),'flex_index_y');
+z_pred = train_prediction(input_filt,output_z_filt,n_hidden(1,3),'flex_index_z');
 
 if p_plot
 figure
@@ -164,7 +145,7 @@ err_independant_train = immse(real_pos,pred_pos)
 
 %% %Training all dimmensions at once
 
-all_pred = train_prediction(input_filt,real_pos, hidden_all,'flex_middle')';
+all_pred = train_prediction(input_filt,real_pos, hidden_all,'flex_index')';
 
 if p_plot
 figure
@@ -214,7 +195,7 @@ end
 err_all_dimenssion_regression_train = immse(real_pos,all_pred)
 
 %% Training and testing, time series
-all_pred_time = train_prediction_time(input_filt,real_pos, hidden_time, delay,'flex_middle_time')';
+all_pred_time = train_prediction_time(input_filt,real_pos, hidden_time, delay,'flex_index_time')';
 %all_pred_time = [zeros(delay, 3);all_pred_time];
 real_pos = real_pos(delay+1:end,:); 
 
@@ -275,7 +256,7 @@ fprintf(f, [num2str(j) ',']);
 if testing
 test_day_path = ['data\' name_test_day];
 
-path = [test_day_path '\' num2str(j) '\test_middle.mat'];
+path = [test_day_path '\' num2str(j) '\test_index.mat'];
 
 load(path);
 
@@ -288,9 +269,9 @@ output_z_filt = SimpleKalmanFilter(output(:,4), output(1,4), 1, 1, 2);
 
 real_pos = [output_x_filt output_y_filt output_z_filt];
 
-x_pred = flex_middle_x(input_filt')';
-y_pred = flex_middle_y(input_filt')';
-z_pred = flex_middle_z(input_filt')';
+x_pred = flex_index_x(input_filt')';
+y_pred = flex_index_y(input_filt')';
+z_pred = flex_index_z(input_filt')';
 indep_pred_regression = [x_pred y_pred z_pred];
 err_indep_regression_test_t = immse(real_pos,indep_pred_regression)
 fprintf(f,[num2str(err_indep_regression_test_t) ',']);
@@ -309,7 +290,7 @@ zlabel('z position [mm]')
 axis equal
 end
 
-prediction_regression = flex_middle(input_filt')';
+prediction_regression = flex_index(input_filt')';
 err_regression_test_t = immse(real_pos,prediction_regression)
 fprintf(f,[num2str(err_regression_test_t) ',']);
 
@@ -331,7 +312,7 @@ end
 % err_regression_test1 = immse(real_pos(:,2),prediction_regression(:,2))
 % err_regression_test2 = immse(real_pos(:,3),prediction_regression(:,3))
 
-prediction_time_series = test_time_series(input_filt,real_pos, hidden_time, delay, 'flex_middle_time');
+prediction_time_series = test_time_series(input_filt,real_pos, hidden_time, delay, 'flex_index_time');
 %prediction_time_series = [zeros(delay, 3);prediction_time_series];
 
 real_pos = real_pos(delay+1:end,:); 

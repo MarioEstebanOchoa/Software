@@ -1,20 +1,20 @@
-timesToTrain = 1;
-datasetToCompute = 1;
+timesToTrain = 5;
+datasetToCompute = 5;
 dstc = 1;
 
 training = true;
 testing = true;
-p_plot = true;
+p_plot = false;
 
-name_test_day = '26-Jul-2019';
+name_test_day = '29-Jul-2019';
 
 test_day_path = ['data\' name_test_day];
 
-f = fopen([test_day_path '\middle.txt'],'at');
+f = fopen([test_day_path '\thumb.txt'],'at');
 
 %fprintf(f,'folder,err_independant_train,err_all_dimenssion_regression_train,err_time_series_train,dataset,err_indep_regression_test_t,err_regression_test_t,err_time_series_test_t\n');
 
-for k = 2:2
+for k = 1:5
 for i=1:timesToTrain
 
     
@@ -29,20 +29,23 @@ folder = k;
 
 delay = 2;
 
-n_hidden = [5 10 10];
+n_hidden = [10 10 10];
 hidden_all = 10;
 hidden_time = 10; %time series
 
 if training
 
-path = [test_day_path '\' num2str(folder) '\train_middle.mat'];
+path = [test_day_path '\' num2str(folder) '\train_thumb.mat'];
 
 load(path);
 
-input(:,2) = input(:,2)*100/5;  % map 0-5 Volts to 0-100
+input1(:,2) = input1(:,2)*100/5;  % map 0-5 Volts to 0-100
+input2(:,2) = input2(:,2)*100/5;  % map 0-5 Volts to 0-100
 
 timestamp = output(:,1);
-input_filt = SimpleKalmanFilter(input(:,2), input(1,2), 1, 1, 2);
+input1_filt = SimpleKalmanFilter(input1(:,2), input1(1,2), 1, 1, 2);
+input2_filt = SimpleKalmanFilter(input2(:,2), input2(1,2), 1, 1, 2);
+
 output_x_filt = SimpleKalmanFilter(output(:,2), output(1,2), 1, 1, 2);
 output_y_filt = SimpleKalmanFilter(output(:,3), output(1,3), 1, 1, 2);
 output_z_filt = SimpleKalmanFilter(output(:,4), output(1,4), 1, 1, 2);
@@ -66,19 +69,26 @@ if p_plot
     ylabel('y position [mm]')
     zlabel('z position [mm]')
     axis equal
-    axis([0 20 0 100 30 70])
+    axis([0 75 0 80 -50 0])
     grid on
     
     figure
-    subplot(4,1,1)
-    plot(timestamp,input(:,2));
+    subplot(5,1,1)
+    plot(timestamp,input1(:,2));
     hold on
-    plot(timestamp,input_filt);
+    plot(timestamp,input1_filt);
     title('DATA FILTERING')
     legend({'measured','filtered'},'Location','northeast');
-    xlabel('flex sensor')
+    xlabel('flex sensor 1')
+    
+    subplot(5,1,2)
+    plot(timestamp,input2(:,2));
+    hold on
+    plot(timestamp,input2_filt);
+    legend({'measured','filtered'},'Location','northeast');
+    xlabel('flex sensor 2')
 
-    subplot(4,1,2)
+    subplot(5,1,3)
     plot(timestamp,output(:,2))
     hold on
     plot(timestamp,output_x_filt)
@@ -86,7 +96,7 @@ if p_plot
     xlabel('x position')
     ylabel('position [mm]')
 
-    subplot(4,1,3)
+    subplot(5,1,4)
     plot(timestamp,output(:,3))
     hold on
     plot(timestamp,output_y_filt)
@@ -94,7 +104,7 @@ if p_plot
     xlabel('y position')
     ylabel('position [mm]')
 
-    subplot(4,1,4)
+    subplot(5,1,5)
     plot(timestamp,output(:,4))
     hold on
     plot(timestamp,output_z_filt)
@@ -108,15 +118,18 @@ real_pos = [output_x_filt output_y_filt output_z_filt];
 %% Training and testing, fitting function, regression
 % Training each dimension independantly 
 
-x_pred = train_prediction(input_filt,output_x_filt,n_hidden(1,1),'flex_middle_x');
-y_pred = train_prediction(input_filt,output_y_filt,n_hidden(1,2),'flex_middle_y');
-z_pred = train_prediction(input_filt,output_z_filt,n_hidden(1,3),'flex_middle_z');
+input_filt = [input1_filt input2_filt];
+
+x_pred = train_prediction(input_filt,output_x_filt,n_hidden(1,1),'flex_thumb_x');
+y_pred = train_prediction(input_filt,output_y_filt,n_hidden(1,2),'flex_thumb_y');
+z_pred = train_prediction(input_filt,output_z_filt,n_hidden(1,3),'flex_thumb_z');
 
 if p_plot
 figure
 subplot(4,1,1)
 plot(timestamp,input_filt)
 title('REGRESSION TRAIN ON EACH DIMENSION')
+legend({'flex 1','flex 2'},'Location','northeast');
 xlabel('flex sensor value')
 
 subplot(4,1,2)
@@ -164,7 +177,7 @@ err_independant_train = immse(real_pos,pred_pos)
 
 %% %Training all dimmensions at once
 
-all_pred = train_prediction(input_filt,real_pos, hidden_all,'flex_middle')';
+all_pred = train_prediction(input_filt,real_pos, hidden_all,'flex_thumb')';
 
 if p_plot
 figure
@@ -214,7 +227,7 @@ end
 err_all_dimenssion_regression_train = immse(real_pos,all_pred)
 
 %% Training and testing, time series
-all_pred_time = train_prediction_time(input_filt,real_pos, hidden_time, delay,'flex_middle_time')';
+all_pred_time = train_prediction_time(input_filt,real_pos, hidden_time, delay,'flex_thumb_time')';
 %all_pred_time = [zeros(delay, 3);all_pred_time];
 real_pos = real_pos(delay+1:end,:); 
 
@@ -275,22 +288,26 @@ fprintf(f, [num2str(j) ',']);
 if testing
 test_day_path = ['data\' name_test_day];
 
-path = [test_day_path '\' num2str(j) '\test_middle.mat'];
+path = [test_day_path '\' num2str(j) '\test_thumb.mat'];
 
 load(path);
 
-input(:,2) = input(:,2)*100/5;  % map 0-5 Volts to 0-100
+input1(:,2) = input1(:,2)*100/5;  % map 0-5 Volts to 0-100
+input2(:,2) = input2(:,2)*100/5;  % map 0-5 Volts to 0-100
 timestamp = output(:,1);
-input_filt = SimpleKalmanFilter(input(:,2), input(1,2), 1, 1, 2);
+input1_filt = SimpleKalmanFilter(input1(:,2), input1(1,2), 1, 1, 2);
+input2_filt = SimpleKalmanFilter(input2(:,2), input2(1,2), 1, 1, 2);
 output_x_filt = SimpleKalmanFilter(output(:,2), output(1,2), 1, 1, 2);
 output_y_filt = SimpleKalmanFilter(output(:,3), output(1,3), 1, 1, 2);
 output_z_filt = SimpleKalmanFilter(output(:,4), output(1,4), 1, 1, 2);
 
 real_pos = [output_x_filt output_y_filt output_z_filt];
+input_filt = [input1_filt input2_filt];
 
-x_pred = flex_middle_x(input_filt')';
-y_pred = flex_middle_y(input_filt')';
-z_pred = flex_middle_z(input_filt')';
+
+x_pred = flex_thumb_x(input_filt')';
+y_pred = flex_thumb_y(input_filt')';
+z_pred = flex_thumb_z(input_filt')';
 indep_pred_regression = [x_pred y_pred z_pred];
 err_indep_regression_test_t = immse(real_pos,indep_pred_regression)
 fprintf(f,[num2str(err_indep_regression_test_t) ',']);
@@ -309,7 +326,7 @@ zlabel('z position [mm]')
 axis equal
 end
 
-prediction_regression = flex_middle(input_filt')';
+prediction_regression = flex_thumb(input_filt')';
 err_regression_test_t = immse(real_pos,prediction_regression)
 fprintf(f,[num2str(err_regression_test_t) ',']);
 
@@ -331,7 +348,7 @@ end
 % err_regression_test1 = immse(real_pos(:,2),prediction_regression(:,2))
 % err_regression_test2 = immse(real_pos(:,3),prediction_regression(:,3))
 
-prediction_time_series = test_time_series(input_filt,real_pos, hidden_time, delay, 'flex_middle_time');
+prediction_time_series = test_time_series(input_filt,real_pos, hidden_time, delay, 'flex_thumb_time');
 %prediction_time_series = [zeros(delay, 3);prediction_time_series];
 
 real_pos = real_pos(delay+1:end,:); 
