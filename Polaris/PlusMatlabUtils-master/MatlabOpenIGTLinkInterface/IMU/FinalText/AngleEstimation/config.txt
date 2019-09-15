@@ -1,0 +1,10 @@
+S4: marker1
+
+S5: Marker3
+
+S6 : Index
+S7:-----
+S8:wrist
+S9:thumb
+S10: little
+S11:middle
