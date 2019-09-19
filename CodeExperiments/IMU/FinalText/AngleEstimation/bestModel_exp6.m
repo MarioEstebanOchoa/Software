@@ -3,8 +3,8 @@ fingers = ["middle","index","thumb"];
 movements = ["random"];
 performance = [];
 performance_f = zeros(length(fingers),2);
-Hidden = 5;
-timesToTrain = 5;
+Hidden =[4 4 3];
+timesToTrain = 10;
 tic()
 dataset = 1;
 global plot_data_if;
@@ -17,7 +17,7 @@ plot_stats_if = false;
 parfor c =1:length(fingers)
     finger = fingers(c);
     disp(['finger:' char(finger)])
-    [b_p, b_p_t ,b_target, b_estimation, b_target_t, b_estimation_t] = get_best_model(finger, Hidden, timesToTrain);
+    [b_p, b_p_t ,b_target, b_estimation, b_target_t, b_estimation_t] = get_best_model(finger, Hidden(c), timesToTrain, c);
     results_finger(c).b_p = b_p;
     results_finger(c).b_p = b_p;
     results_finger(c).b_p_t = b_p_t;
@@ -27,52 +27,21 @@ parfor c =1:length(fingers)
     results_finger(c).b_estimation_t = b_estimation_t;
 end
 
-save('bestModelFingers_exp1','results_finger');
+save('bestModelFingers_exp6','results_finger');
 
 
-function [b_p, b_p_t ,b_target, b_estimation, b_target_t, b_estimation_t] = get_best_model(finger, hidden_n, timesToTrain)
-global plot_data_if;
+function [b_p, b_p_t ,b_target, b_estimation, b_target_t, b_estimation_t] = get_best_model(finger, hidden_n, timesToTrain, c)
 
-min_p_t = 100;
-mov = "random";
+    min_p_t = 100;
 
-name = [char(finger) '_bm_nnm_exp1'];
+    name = [char(finger) '_bm_nnm_exp6'];
 
-for i = 1:timesToTrain
-    for j = 2:2
-        path_l = [char(finger) '\' char(mov) '_t' num2str(j) '_quat.csv'];
-        data = readtable(path_l);
-        [input, output] = get_datasets_exp1(data, finger);
-        if plot_data_if, plot_dataset(input,output); end
+    for i = 1:timesToTrain
+        [XTrain, XTest, YTrain, YTest] = get_datasets_exp6(c);
 
-        % path_lt = [char(finger) '\' char(mov) '_t' num2str(2) '_quat.csv']; 
-        % data_t = readtable(path_lt);
-        % [input_t, output_t] = get_datasets_exp1(data_t, finger);
-        % if plot_data_if, plot_dataset(input_t,output_t); end
+        [p, target, estimation] = train_prediction(XTrain, YTrain, hidden_n, name);
 
-        numTimeStepsTrain = floor(0.5*size(input,1));
-
-        XTrain = input(1:numTimeStepsTrain+1,:);
-        XTest = input(numTimeStepsTrain+1:end,:);
-        YTrain = output(1:numTimeStepsTrain+1,:);
-        YTest = output(numTimeStepsTrain+1:end,:);
-
-        [coeff,scoreTrain,~,~,explained,mu] = pca(XTrain);
-
-        sum_explained = 0;
-        idx = 0;
-        while sum_explained < 95
-            idx = idx + 1;
-            sum_explained = sum_explained + explained(idx);
-        end
-
-        scoreTrain95 = scoreTrain(:,1:idx);
-
-        [p, target, estimation] = train_prediction(scoreTrain95, YTrain, hidden_n, name);
-
-        scoreTest95 = (XTest-mu)*coeff(:,1:idx);
-
-        [p_t, target_t, estimation_t] = test_prediction(scoreTest95, YTest, hidden_n, name);
+        [p_t, target_t, estimation_t] = test_prediction(XTest, YTest, hidden_n, name);
 
         if p_t < min_p_t
             min_p_t = p_t;
@@ -87,17 +56,30 @@ for i = 1:timesToTrain
         end
     end
 end
+
+function [XTrain, XTest, YTrain, YTest] = get_datasets_exp6(c)
+
+    model1 = load('bestModelFingers_exp1.mat');
+    model2 = load('bestModelFingers_exp2.mat');
+    in1 = cell2mat(model1.results_finger(c).b_estimation)';
+    out1 = rmmissing(cell2mat(model1.results_finger(c).b_target)');
+    in2 = cell2mat(model2.results_finger(c).b_estimation)';
+    out2 = rmmissing(cell2mat(model2.results_finger(c).b_target)');
+
+    XTrain = [in1(1:end-1,:) in2(1:end-1,:)];
+    YTrain = out1;
+    
+    in1 = model1.results_finger(c).b_estimation_t;
+    out1 = model1.results_finger(c).b_target_t;
+    in2 = model2.results_finger(c).b_estimation_t;
+    out2 = model2.results_finger(c).b_target_t;
+    
+    XTest = [in1 in2];
+    YTest = out1;
+    
 end
 
-
-function [input, output] = get_datasets_exp1(data, finger)
-    in1 = data{:,9:12};
-    in2 = data{:,13:16};
-    input = [in1 in2];
-    output = data{:,21:23};
-end
-
-% function [input, output] = get_datasets_exp2(data, finger)
+% function [input, output] = get_datasets_exp6(data, finger)
 %     if (finger == "middle") || (finger == "index")
 %         in1 = data{:,9:12};
 %         in2 = data{:,13:16};

@@ -40,7 +40,7 @@ mov = "random";
 name = [char(finger) '_bm_nnm_exp2'];
 
 for i = 1:timesToTrain
-    for j = 1:2
+    for j = 2:2
         path_l = [char(finger) '\' char(mov) '_t' num2str(j) '_quat.csv'];
         data = readtable(path_l);
         [input, output] = get_datasets_exp2(data, finger);
