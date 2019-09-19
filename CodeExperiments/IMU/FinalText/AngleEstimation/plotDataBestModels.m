@@ -63,7 +63,7 @@ function [] = plot_result(target, estimation)
 end
 
 function [stats] = plot_stats(target, estimation)
-er = (abs(mean(gsubtract(estimation(1:end-1,:),target(1:end-1,:)))));
+%error = (abs(mean(gsubtract(estimation(1:end-1,:),target(1:end-1,:)))));
 error = gsubtract(estimation(1:end-1,:), target(1:end-1,:));
 figure
 [m,n] = size(error);
