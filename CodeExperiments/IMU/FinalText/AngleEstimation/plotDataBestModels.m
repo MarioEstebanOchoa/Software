@@ -1,6 +1,6 @@
 close all
 fingers = ["middle","index","thumb"];
-c = 3;
+c = 1;
 finger = fingers(c);
 
 load('bestModelFingers_exp6.mat')
